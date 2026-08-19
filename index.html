@@ -3,35 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Timing Vault</title>
+  <title>Timing Vault - Robust</title>
   <style>
-    :root { 
-      --bg-color: #0f172a; 
-      --panel-bg: #1e293b; 
-      --accent-green: #22c55e; 
-      --accent-red: #ef4444; 
-      --text-color: #f8fafc; 
-    }
-    * { 
-      box-sizing: border-box; 
-      user-select: none; 
-      -webkit-tap-highlight-color: transparent; 
-      touch-action: none; 
-    }
-    body { 
-      margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-color); 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-      display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; 
-    }
-    .game-container { 
-      background-color: var(--panel-bg); padding: 2rem; border-radius: 20px; 
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); text-align: center; width: 90%; max-width: 360px; 
-    }
+    :root { --bg-color: #0f172a; --panel-bg: #1e293b; --accent-green: #22c55e; --accent-red: #ef4444; --text-color: #f8fafc; }
+    * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
+    body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-color); font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+    .game-container { background-color: var(--panel-bg); padding: 2rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); text-align: center; width: 90%; max-width: 360px; position: relative; }
     .timer-container { width: 250px; height: 8px; background: #334155; margin: 0 auto 15px auto; border-radius: 4px; overflow: hidden; }
     #timer-bar { width: 100%; height: 100%; background: var(--accent-green); transition: width 0.05s linear; }
     .vault-wrapper { position: relative; width: 250px; height: 250px; margin: 0 auto 15px auto; }
     canvas { width: 100%; height: 100%; border-radius: 50%; }
-    .btn { background-color: var(--accent-green); color: #000; border: none; padding: 15px 30px; font-weight: bold; border-radius: 8px; width: 100%; cursor: pointer; font-size: 1.1rem; }
+    
+    /* 버튼 클릭 이슈 해결: z-index 추가 및 절대 위치 조정 */
+    #start-btn { 
+        background-color: var(--accent-green); color: #000; border: none; 
+        padding: 15px 30px; font-weight: bold; border-radius: 8px; width: 100%; 
+        cursor: pointer; font-size: 1.1rem; position: relative; z-index: 10;
+    }
   </style>
 </head>
 <body>
@@ -40,7 +28,7 @@
     <h1>TIMING VAULT</h1>
     <div class="timer-container"><div id="timer-bar"></div></div>
     <div class="vault-wrapper" id="vault-click-area"><canvas id="vaultCanvas" width="300" height="300"></canvas></div>
-    <button class="btn" id="start-btn">GAME START</button>
+    <button id="start-btn">GAME START</button>
   </div>
 
   <script>
@@ -63,13 +51,10 @@
 
     function draw() {
       ctx.clearRect(0, 0, 300, 300);
-      // 다이얼 배경
       ctx.beginPath(); ctx.arc(150, 150, 120, 0, Math.PI * 2);
       ctx.fillStyle = '#334155'; ctx.fill();
-      // 타겟
       ctx.beginPath(); ctx.arc(150, 150, 116, targetStart, targetStart + targetSize);
       ctx.lineWidth = 8; ctx.strokeStyle = '#22c55e'; ctx.stroke();
-      // 바늘
       const needleX = 150 + Math.cos(needleAngle) * 100;
       const needleY = 150 + Math.sin(needleAngle) * 100;
       ctx.beginPath(); ctx.moveTo(150, 150); ctx.lineTo(needleX, needleY);
@@ -78,7 +63,8 @@
 
     function update(timestamp) {
       if (!lastTime) lastTime = timestamp;
-      const deltaTime = (timestamp - lastTime) / 1000;
+      // [중요] 렉 방지: 한 프레임이 너무 길어질 경우(최대 0.1초로 제한) 보정
+      const deltaTime = Math.min((timestamp - lastTime) / 1000, 0.1); 
       lastTime = timestamp;
 
       if (isPlaying) {
@@ -92,10 +78,12 @@
       requestAnimationFrame(update);
     }
 
-    function startGame() {
+    function startGame(e) {
+      if(e) { e.preventDefault(); e.stopPropagation(); }
       score = 0; speed = 2.0; isPlaying = true;
       timeRemaining = 10; startBtn.style.display = 'none';
       generateTarget();
+      lastTime = performance.now(); // 초기 시간 보정
       requestAnimationFrame(update);
     }
 
@@ -106,11 +94,9 @@
     }
 
     function handleAction(e) {
-      if (e) e.preventDefault();
-      
-      // 0.2초 이내의 중복 입력 차단 (가장 중요)
+      if (e) { e.preventDefault(); e.stopPropagation(); }
       const now = Date.now();
-      if (now - lastInputTime < 200) return;
+      if (now - lastInputTime < 300) return; // 디바운싱 강화 (300ms)
       lastInputTime = now;
 
       if (!isPlaying) return;
@@ -130,8 +116,10 @@
       }
     }
 
+    // [이벤트 분리]
     vaultClickArea.addEventListener('pointerdown', handleAction);
-    startBtn.addEventListener('click', startGame);
+    startBtn.addEventListener('pointerdown', startGame);
+    
     window.addEventListener('keydown', (e) => { 
         if(e.code === 'Space') { 
             if(!isPlaying && startBtn.style.display !== 'none') startGame(); 
