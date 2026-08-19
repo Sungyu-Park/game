@@ -5,132 +5,355 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Timing Vault</title>
   <style>
-    :root { --bg-color: #0f172a; --panel-bg: #1e293b; --accent-green: #22c55e; --accent-red: #ef4444; --text-color: #f8fafc; }
-    * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
-    body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-color); font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
-    .game-container { background-color: var(--panel-bg); padding: 2rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); text-align: center; width: 90%; max-width: 360px; }
-    .timer-container { width: 250px; height: 8px; background: #334155; margin: 0 auto 15px auto; border-radius: 4px; overflow: hidden; }
-    #timer-bar { width: 100%; height: 100%; background: var(--accent-green); transition: width 0.05s linear; }
-    .vault-wrapper { position: relative; width: 250px; height: 250px; margin: 0 auto 15px auto; }
-    canvas { width: 100%; height: 100%; border-radius: 50%; }
-    #start-btn { background-color: var(--accent-green); color: #000; border: none; padding: 15px 30px; font-weight: bold; border-radius: 8px; width: 100%; cursor: pointer; font-size: 1.1rem; }
+    :root {
+      --bg-color: #0f172a;
+      --panel-bg: #1e293b;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --text-color: #f8fafc;
+      --sub-text: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .game-container {
+      background-color: var(--panel-bg);
+      padding: 2rem;
+      border-radius: 24px;
+      box-shadow: 0 20px 30px rgba(0, 0, 0, 0.4);
+      text-align: center;
+      width: 90%;
+      max-width: 380px;
+      position: relative;
+    }
+
+    .header-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: var(--sub-text);
+      font-weight: 600;
+    }
+
+    .score-badge {
+      font-size: 1.2rem;
+      color: var(--accent-green);
+      font-weight: bold;
+    }
+
+    h1 {
+      margin: 0 0 1rem 0;
+      font-size: 1.5rem;
+      letter-spacing: 2px;
+      color: var(--text-color);
+    }
+
+    .timer-container {
+      width: 260px;
+      height: 8px;
+      background: #334155;
+      margin: 0 auto 15px auto;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    #timer-bar {
+      width: 100%;
+      height: 100%;
+      background: var(--accent-green);
+      transition: width 0.05s linear, background-color 0.2s;
+    }
+
+    .vault-wrapper {
+      position: relative;
+      width: 260px;
+      height: 260px;
+      margin: 0 auto 1.5rem auto;
+      cursor: pointer;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+    }
+
+    .btn {
+      background-color: var(--accent-green);
+      color: #0f172a;
+      border: none;
+      padding: 16px 32px;
+      font-weight: 800;
+      border-radius: 12px;
+      width: 100%;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: transform 0.1s, opacity 0.2s;
+      position: relative;
+      z-index: 10;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .guide-text {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: var(--sub-text);
+    }
   </style>
 </head>
 <body>
 
   <div class="game-container">
+    <div class="header-info">
+      <div>BEST: <span id="high-score">0</span></div>
+      <div>SCORE: <span id="current-score" class="score-badge">0</span></div>
+    </div>
+
     <h1>TIMING VAULT</h1>
-    <div class="timer-container"><div id="timer-bar"></div></div>
-    <div class="vault-wrapper" id="vault-click-area"><canvas id="vaultCanvas" width="300" height="300"></canvas></div>
-    <button id="start-btn">GAME START</button>
+
+    <div class="timer-container">
+      <div id="timer-bar"></div>
+    </div>
+
+    <div class="vault-wrapper" id="vault-area">
+      <canvas id="vaultCanvas" width="300" height="300"></canvas>
+    </div>
+
+    <button class="btn" id="start-btn">GAME START</button>
+    
+    <div class="guide-text">터치 또는 스페이스바를 눌러 잠금을 해제하세요</div>
   </div>
 
   <script>
+    // --- DOM 요소 참조 ---
     const canvas = document.getElementById('vaultCanvas');
     const ctx = canvas.getContext('2d');
     const timerBar = document.getElementById('timer-bar');
     const startBtn = document.getElementById('start-btn');
-    const vaultClickArea = document.getElementById('vault-click-area');
+    const vaultArea = document.getElementById('vault-area');
+    const currentScoreEl = document.getElementById('current-score');
+    const highScoreEl = document.getElementById('high-score');
 
+    // --- 게임 상태 변수 ---
     let isPlaying = false;
-    let score = 0, needleAngle = 0, speed = 2.0;
-    let direction = 1, targetStart = 0, targetSize = Math.PI / 3;
-    let timeRemaining = 10, lastTime = 0, lastInputTime = 0;
+    let score = 0;
+    let highScore = localStorage.getItem('timing_vault_highscore') || 0;
+    
+    let needleAngle = 0;
+    let speed = 2.5; // 기본 이동 속도 (라디안/초)
+    let direction = 1; // 1: 시계방향, -1: 반시계방향
+    
+    let targetStart = 0;
+    let targetSize = Math.PI / 3; // 초기 타겟 크기 (60도)
+    
+    let timeRemaining = 10; // 제한시간 10초
+    let lastTime = 0;
+    let lastInputTime = 0;
 
+    // --- 초기화 ---
+    highScoreEl.innerText = highScore;
+
+    // --- 타겟 영역 생성 함수 ---
     function generateTarget() {
+      // 0 ~ 2π 사이의 무작위 시작 각도
       targetStart = Math.random() * Math.PI * 2;
-      const reduction = Math.pow(0.95, Math.floor(score / 5));
-      targetSize = Math.max(Math.PI / 20, (Math.PI / 3) * reduction);
+      
+      // 5단계마다 타겟 크기 5% 축소 (최소 크기 제한)
+      const reductionFactor = Math.pow(0.95, Math.floor(score / 5));
+      const baseSize = Math.PI / 3;
+      const minSize = Math.PI / 18; // 최소 약 10도
+      targetSize = Math.max(minSize, baseSize * reductionFactor);
     }
 
+    // --- Canvas 그래픽 렌더링 ---
     function draw() {
       ctx.clearRect(0, 0, 300, 300);
-      ctx.beginPath(); ctx.arc(150, 150, 120, 0, Math.PI * 2);
-      ctx.fillStyle = '#334155'; ctx.fill();
-      // 타겟 그리기
-      ctx.beginPath(); ctx.arc(150, 150, 116, targetStart, targetStart + targetSize);
-      ctx.lineWidth = 8; ctx.strokeStyle = '#22c55e'; ctx.stroke();
-      // 바늘 그리기
+
+      // 1. 외곽 다이얼 플레이트
+      ctx.beginPath();
+      ctx.arc(150, 150, 130, 0, Math.PI * 2);
+      ctx.fillStyle = '#1e293b';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(150, 150, 120, 0, Math.PI * 2);
+      ctx.fillStyle = '#334155';
+      ctx.fill();
+
+      // 2. 타겟 영역 (초록색 호)
+      ctx.beginPath();
+      ctx.arc(150, 150, 116, targetStart, targetStart + targetSize);
+      ctx.lineWidth = 10;
+      ctx.strokeStyle = '#22c55e';
+      ctx.stroke();
+
+      // 3. 중앙 바늘 (빨간색)
       const needleX = 150 + Math.cos(needleAngle) * 100;
       const needleY = 150 + Math.sin(needleAngle) * 100;
-      ctx.beginPath(); ctx.moveTo(150, 150); ctx.lineTo(needleX, needleY);
-      ctx.lineWidth = 5; ctx.strokeStyle = '#ef4444'; ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(150, 150);
+      ctx.lineTo(needleX, needleY);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // 4. 중앙 노브 (시각적 장식)
+      ctx.beginPath();
+      ctx.arc(150, 150, 12, 0, Math.PI * 2);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fill();
     }
 
+    // --- 메인 게임 루프 (Delta Time 적용) ---
     function update(timestamp) {
       if (!lastTime) lastTime = timestamp;
-      const deltaTime = Math.min((timestamp - lastTime) / 1000, 0.1); 
+      
+      // deltaTime 계산 (최대 0.1초로 clamped하여 렉 발생 시 속도 튐 방지)
+      const deltaTime = Math.min((timestamp - lastTime) / 1000, 0.1);
       lastTime = timestamp;
 
       if (isPlaying) {
+        // 제한시간 차감
         timeRemaining -= deltaTime;
-        // 각도 업데이트 후 정규화 (음수 방지)
+        
+        // 바늘 이동 및 각도 정규화 (항상 0 ~ 2π 양수 범위 유지)
         needleAngle += (speed * direction) * deltaTime * 2;
         needleAngle = (needleAngle % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2);
-        
-        timerBar.style.width = Math.max(0, (timeRemaining / 10) * 100) + "%";
-        if (timeRemaining <= 0) gameOver();
+
+        // UI 타이머 바 업데이트
+        const progress = Math.max(0, (timeRemaining / 10) * 100);
+        timerBar.style.width = progress + "%";
+
+        if (progress < 30) {
+          timerBar.style.backgroundColor = '#ef4444'; // 남은 시간 부족 시 빨간색
+        } else {
+          timerBar.style.backgroundColor = '#22c55e';
+        }
+
+        // 시간 초과 시 게임 오버
+        if (timeRemaining <= 0) {
+          gameOver();
+        }
       }
+
       draw();
       requestAnimationFrame(update);
     }
 
+    // --- 게임 시작 ---
     function startGame(e) {
-      if(e) { e.preventDefault(); e.stopPropagation(); }
-      score = 0; speed = 2.0; isPlaying = true;
-      timeRemaining = 10; startBtn.style.display = 'none';
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      score = 0;
+      speed = 2.5;
+      direction = 1;
+      timeRemaining = 10;
+      isPlaying = true;
+
+      currentScoreEl.innerText = score;
+      startBtn.style.display = 'none';
+
       generateTarget();
       lastTime = performance.now();
-      requestAnimationFrame(update);
     }
 
+    // --- 게임 오버 ---
     function gameOver() {
       isPlaying = false;
+      
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('timing_vault_highscore', highScore);
+        highScoreEl.innerText = highScore;
+      }
+
       startBtn.style.display = 'block';
       startBtn.innerText = 'RETRY';
     }
 
+    // --- 입력 판정 처리 ---
     function handleAction(e) {
-      if(e) { e.preventDefault(); e.stopPropagation(); }
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      // 0.25초 디바운싱 (더블 터치 / 연속 입력 차단)
       const now = Date.now();
-      if (now - lastInputTime < 300) return;
+      if (now - lastInputTime < 250) return;
       lastInputTime = now;
 
       if (!isPlaying) return;
-      
-      // 현재 각도 범위 확인 (이미 정규화되어 있음)
+
+      // 타겟 범위 판정
       let current = needleAngle;
       let targetEnd = (targetStart + targetSize) % (Math.PI * 2);
-      
+
       let isSuccess = false;
       if (targetStart < targetEnd) {
         isSuccess = current >= targetStart && current <= targetEnd;
       } else {
-        // 타겟이 0도를 넘어서는 경우
+        // 타겟이 360도 경계를 넘어서 배치된 경우
         isSuccess = current >= targetStart || current <= targetEnd;
       }
 
       if (isSuccess) {
         score++;
-        speed += 0.2;
-        direction *= -1;
-        timeRemaining = 10;
+        currentScoreEl.innerText = score;
+        
+        speed += 0.25; // 성공 시 회전 속도 증가
+        direction *= -1; // 회전 방향 전환
+        timeRemaining = 10; // 제한시간 리셋
+        
         generateTarget();
       } else {
         gameOver();
       }
     }
 
-    vaultClickArea.addEventListener('pointerdown', handleAction);
+    // --- 이벤트 리스너 등록 ---
+    vaultArea.addEventListener('pointerdown', handleAction);
     startBtn.addEventListener('pointerdown', startGame);
-    
-    window.addEventListener('keydown', (e) => { 
-        if(e.code === 'Space') { 
-            if(!isPlaying && startBtn.style.display !== 'none') startGame(); 
-            else handleAction(); 
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        if (!isPlaying && startBtn.style.display !== 'none') {
+          startGame();
+        } else {
+          handleAction();
         }
+      }
     });
-    
+
+    // 게임 루프 가동
     requestAnimationFrame(update);
   </script>
 </body>
