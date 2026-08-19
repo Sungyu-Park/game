@@ -24,7 +24,7 @@
       padding: 0;
       background-color: var(--bg-color);
       color: var(--text-color);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -43,82 +43,35 @@
       max-width: 360px;
     }
 
-    h1 {
-      margin: 0 0 10px 0;
-      font-size: 1.5rem;
-      letter-spacing: 2px;
-      color: #94a3b8;
-    }
+    h1 { margin: 0 0 10px 0; font-size: 1.5rem; color: #94a3b8; }
 
     .score-board {
-      display: flex;
-      justify-content: space-around;
-      margin-bottom: 15px;
-      font-size: 1.1rem;
-      font-weight: bold;
+      display: flex; justify-content: space-around;
+      margin-bottom: 15px; font-size: 1.1rem; font-weight: bold;
     }
-
-    .score-board span {
-      color: var(--accent-green);
-    }
+    .score-board span { color: var(--accent-green); }
 
     .timer-container {
-      width: 250px;
-      height: 8px;
-      background: #334155;
-      margin: 0 auto 15px auto;
-      border-radius: 4px;
-      overflow: hidden;
+      width: 250px; height: 8px; background: #334155;
+      margin: 0 auto 15px auto; border-radius: 4px; overflow: hidden;
     }
-
     #timer-bar {
-      width: 100%;
-      height: 100%;
-      background: var(--accent-green);
-      transition: width 0.1s linear, background-color 0.2s;
+      width: 100%; height: 100%; background: var(--accent-green);
+      transition: width 0.1s linear;
     }
 
     .vault-wrapper {
-      position: relative;
-      width: 250px;
-      height: 250px;
-      margin: 0 auto 15px auto;
-      cursor: pointer;
-      touch-action: none; /* 모바일/태블릿 터치 시 스크롤 및 줌 방지 */
+      position: relative; width: 250px; height: 250px;
+      margin: 0 auto 15px auto; cursor: pointer;
+      touch-action: none; /* 터치 스크롤/줌 방지 */
     }
 
-    canvas {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-    }
-
-    .instructions {
-      font-size: 0.85rem;
-      color: #64748b;
-      margin-bottom: 15px;
-    }
+    canvas { width: 100%; height: 100%; border-radius: 50%; }
 
     .btn {
-      background-color: var(--accent-green);
-      color: #000;
-      border: none;
-      padding: 12px 24px;
-      font-size: 1rem;
-      font-weight: bold;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: transform 0.1s, background-color 0.2s;
-      width: 100%;
-    }
-
-    .btn:hover {
-      transform: scale(1.02);
-      background-color: #4ade80;
-    }
-
-    .btn:active {
-      transform: scale(0.98);
+      background-color: var(--accent-green); color: #000; border: none;
+      padding: 12px 24px; font-size: 1rem; font-weight: bold;
+      border-radius: 8px; cursor: pointer; width: 100%;
     }
   </style>
 </head>
@@ -126,21 +79,14 @@
 
   <div class="game-container">
     <h1>TIMING VAULT</h1>
-    
     <div class="score-board">
       <div>SCORE: <span id="score">0</span></div>
       <div>BEST: <span id="high-score">0</span></div>
     </div>
-
-    <div class="timer-container">
-      <div id="timer-bar"></div>
-    </div>
-
+    <div class="timer-container"><div id="timer-bar"></div></div>
     <div class="vault-wrapper" id="vault-click-area">
       <canvas id="vaultCanvas" width="300" height="300"></canvas>
     </div>
-
-    <div class="instructions">화면을 터치하거나 스페이스바를 누르세요</div>
     <button class="btn" id="start-btn">GAME START</button>
   </div>
 
@@ -157,7 +103,6 @@
     const centerY = canvas.height / 2;
     const radius = 120;
 
-    // 게임 상태 변수
     let isPlaying = false;
     let score = 0;
     let highScore = localStorage.getItem('vault_high_score') || 0;
@@ -166,11 +111,10 @@
     let speed = 0.03;
     let direction = 1;
     
-    const baseTargetSize = Math.PI / 3; // 기본 크기 (60도)
+    const baseTargetSize = Math.PI / 3;
     let targetStart = 0;
     let targetSize = baseTargetSize;
 
-    // 시간 제한 변수 (10초)
     const MAX_TIME = 10;
     let timeRemaining = MAX_TIME;
     let lastTime = 0;
@@ -178,190 +122,108 @@
 
     highScoreEl.innerText = highScore;
 
-    // 새로운 타겟 영역 생성
     function generateTarget() {
-      let minDistance = Math.PI / 2;
-      let newTarget = Math.random() * Math.PI * 2;
-      
-      while (Math.abs(newTarget - needleAngle) < minDistance) {
-        newTarget = Math.random() * Math.PI * 2;
-      }
-      
-      targetStart = newTarget;
-
-      // 5단계 상승 시마다 타겟 크기를 5%씩 축소
+      targetStart = Math.random() * Math.PI * 2;
+      // 5단계마다 타겟 크기 5%씩 축소
       const reductionFactor = Math.pow(0.95, Math.floor(score / 5));
       targetSize = Math.max(Math.PI / 20, baseTargetSize * reductionFactor);
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // 다이얼
+      ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#334155'; ctx.fill();
+      ctx.lineWidth = 8; ctx.strokeStyle = '#475569'; ctx.stroke();
 
-      // 1. 금고 다이얼 바탕
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      ctx.fillStyle = '#334155';
-      ctx.fill();
-      ctx.lineWidth = 8;
-      ctx.strokeStyle = '#475569';
-      ctx.stroke();
+      // 타겟
+      ctx.beginPath(); ctx.arc(centerX, centerY, radius - 4, targetStart, targetStart + targetSize);
+      ctx.lineWidth = 12; ctx.strokeStyle = '#22c55e'; ctx.stroke();
 
-      // 2. 정답(타겟) 영역
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius - 4, targetStart, targetStart + targetSize);
-      ctx.lineWidth = 12;
-      ctx.strokeStyle = '#22c55e';
-      ctx.stroke();
-
-      // 3. 회전 바늘
+      // 바늘
       const needleX = centerX + Math.cos(needleAngle) * (radius - 15);
       const needleY = centerY + Math.sin(needleAngle) * (radius - 15);
-
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.lineTo(needleX, needleY);
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = '#ef4444';
-      ctx.lineCap = 'round';
-      ctx.stroke();
-
-      // 4. 중앙 노브
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 15, 0, Math.PI * 2);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fill();
+      ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(needleX, needleY);
+      ctx.lineWidth = 5; ctx.strokeStyle = '#ef4444'; ctx.lineCap = 'round'; ctx.stroke();
     }
 
     function update(timestamp) {
       if (!isPlaying) return;
 
-      // deltaTime 계산으로 프레임 독립적인 타이머 구현
       if (!lastTime) lastTime = timestamp;
       const deltaTime = (timestamp - lastTime) / 1000;
       lastTime = timestamp;
-
       timeRemaining -= deltaTime;
       
-      // 타이머 바 상태 업데이트
-      const timePercent = Math.max(0, (timeRemaining / MAX_TIME) * 100);
-      timerBar.style.width = timePercent + "%";
+      timerBar.style.width = Math.max(0, (timeRemaining / MAX_TIME) * 100) + "%";
       
-      if (timeRemaining <= 3) {
-        timerBar.style.backgroundColor = 'var(--accent-red)';
-      } else {
-        timerBar.style.backgroundColor = 'var(--accent-green)';
-      }
-
-      // 시간 초과 시 게임 오버
       if (timeRemaining <= 0) {
         gameOver();
         return;
       }
 
-      // 바늘 회전
-      needleAngle += speed * direction;
-      needleAngle = (needleAngle + Math.PI * 2) % (Math.PI * 2);
-
+      needleAngle = (needleAngle + speed * direction + Math.PI * 2) % (Math.PI * 2);
       draw();
       animFrameId = requestAnimationFrame(update);
     }
 
     function startGame() {
-      score = 0;
-      speed = 0.03;
-      direction = 1;
-      needleAngle = 0;
-      timeRemaining = MAX_TIME;
-      lastTime = 0;
-      
+      score = 0; speed = 0.03; direction = 1; needleAngle = 0;
+      timeRemaining = MAX_TIME; lastTime = 0;
       scoreEl.innerText = score;
-      timerBar.style.width = "100%";
-      timerBar.style.backgroundColor = 'var(--accent-green)';
       startBtn.style.display = 'none';
-      
       isPlaying = true;
       generateTarget();
-      
-      if (animFrameId) cancelAnimationFrame(animFrameId);
       animFrameId = requestAnimationFrame(update);
     }
 
     function gameOver() {
       isPlaying = false;
       startBtn.style.display = 'block';
-      startBtn.innerText = 'TRY AGAIN';
-      
+      startBtn.innerText = 'GAME OVER! RESTART';
       if (score > highScore) {
         highScore = score;
         localStorage.setItem('vault_high_score', highScore);
         highScoreEl.innerText = highScore;
       }
-      
-      // 실패 시 빨간색 강조 피드백
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
-      ctx.fill();
     }
 
-    function handleAction() {
+    // 터치/클릭 로직 통합
+    function handleAction(e) {
+      if (e) e.preventDefault();
       if (!isPlaying) return;
+      
+      // 입력 즉시 잠금 (중복 클릭 방지)
+      isPlaying = false; 
 
-      // 각도 범위 판정 (0 ~ 2PI)
       let current = needleAngle;
       let start = (targetStart + Math.PI * 2) % (Math.PI * 2);
       let end = (start + targetSize) % (Math.PI * 2);
-
-      let isSuccess = false;
-
-      if (start < end) {
-        isSuccess = current >= start && current <= end;
-      } else {
-        // 타겟이 360도 경계를 넘어가는 경우
-        isSuccess = current >= start || current <= end;
-      }
+      let isSuccess = (start < end) ? (current >= start && current <= end) : (current >= start || current <= end);
 
       if (isSuccess) {
         score++;
         scoreEl.innerText = score;
-        
-        // 난이도 상승: 속도 증가, 방향 전환, 시간 10초로 재설정
         speed += 0.003;
         direction *= -1;
         timeRemaining = MAX_TIME;
-        
         generateTarget();
+        isPlaying = true; // 성공 시에만 다시 활성화
       } else {
         gameOver();
       }
     }
 
-    // 터치 및 클릭 이벤트 지원 (모바일/태블릿 반응성 최적화)
-    vaultClickArea.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      if (isPlaying) {
-        handleAction();
-      }
-    });
+    vaultClickArea.addEventListener('pointerdown', handleAction);
 
-    startBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      startGame();
-    });
-
-    // 스페이스바 조작 지원
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
         e.preventDefault();
-        if (!isPlaying && startBtn.style.display !== 'none') {
-          startGame();
-        } else if (isPlaying) {
-          handleAction();
-        }
+        if (!isPlaying && startBtn.style.display !== 'none') startGame();
+        else if (isPlaying) handleAction();
       }
     });
 
-    // 초기 화면 그리기
     generateTarget();
     draw();
   </script>
