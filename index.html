@@ -163,7 +163,7 @@
     let highScore = localStorage.getItem('timing_vault_highscore') || 0;
     
     let needleAngle = 0;
-    let speed = 2.5; // 기본 이동 속도 (라디안/초)
+    let speed = 1; // 기본 이동 속도 (라디안/초)
     let direction = 1; // 1: 시계방향, -1: 반시계방향
     
     let targetStart = 0;
@@ -273,7 +273,7 @@
       }
 
       score = 0;
-      speed = 2.5;
+      speed = 1;
       direction = 1;
       timeRemaining = 10;
       isPlaying = true;
@@ -329,7 +329,7 @@
         score++;
         currentScoreEl.innerText = score;
         
-        speed += 0.25; // 성공 시 회전 속도 증가
+        speed += 0.1; // 성공 시 회전 속도 증가
         direction *= -1; // 회전 방향 전환
         timeRemaining = 10; // 제한시간 리셋
         
