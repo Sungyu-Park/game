@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Timing Vault</title>
   <style>
     :root {
@@ -10,13 +10,13 @@
       --panel-bg: #1e293b;
       --accent-green: #22c55e;
       --accent-red: #ef4444;
-      --dial-color: #334155;
       --text-color: #f8fafc;
     }
 
     * {
       box-sizing: border-box;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
@@ -30,6 +30,7 @@
       align-items: center;
       min-height: 100vh;
       overflow: hidden;
+      touch-action: manipulation;
     }
 
     .game-container {
@@ -38,7 +39,8 @@
       border-radius: 20px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
       text-align: center;
-      width: 360px;
+      width: 90%;
+      max-width: 360px;
     }
 
     h1 {
@@ -51,7 +53,7 @@
     .score-board {
       display: flex;
       justify-content: space-around;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       font-size: 1.1rem;
       font-weight: bold;
     }
@@ -60,12 +62,29 @@
       color: var(--accent-green);
     }
 
+    .timer-container {
+      width: 250px;
+      height: 8px;
+      background: #334155;
+      margin: 0 auto 15px auto;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    #timer-bar {
+      width: 100%;
+      height: 100%;
+      background: var(--accent-green);
+      transition: width 0.1s linear, background-color 0.2s;
+    }
+
     .vault-wrapper {
       position: relative;
       width: 250px;
       height: 250px;
-      margin: 0 auto 20px auto;
+      margin: 0 auto 15px auto;
       cursor: pointer;
+      touch-action: none; /* 모바일/태블릿 터치 시 스크롤 및 줌 방지 */
     }
 
     canvas {
@@ -75,7 +94,7 @@
     }
 
     .instructions {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: #64748b;
       margin-bottom: 15px;
     }
@@ -90,15 +109,16 @@
       border-radius: 8px;
       cursor: pointer;
       transition: transform 0.1s, background-color 0.2s;
+      width: 100%;
     }
 
     .btn:hover {
-      transform: scale(1.05);
+      transform: scale(1.02);
       background-color: #4ade80;
     }
 
     .btn:active {
-      transform: scale(0.95);
+      transform: scale(0.98);
     }
   </style>
 </head>
@@ -112,11 +132,15 @@
       <div>BEST: <span id="high-score">0</span></div>
     </div>
 
+    <div class="timer-container">
+      <div id="timer-bar"></div>
+    </div>
+
     <div class="vault-wrapper" id="vault-click-area">
       <canvas id="vaultCanvas" width="300" height="300"></canvas>
     </div>
 
-    <div class="instructions">화면을 클릭하거나 스페이스바를 누르세요</div>
+    <div class="instructions">화면을 터치하거나 스페이스바를 누르세요</div>
     <button class="btn" id="start-btn">GAME START</button>
   </div>
 
@@ -125,6 +149,7 @@
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('score');
     const highScoreEl = document.getElementById('high-score');
+    const timerBar = document.getElementById('timer-bar');
     const startBtn = document.getElementById('start-btn');
     const vaultClickArea = document.getElementById('vault-click-area');
 
@@ -138,17 +163,23 @@
     let highScore = localStorage.getItem('vault_high_score') || 0;
     
     let needleAngle = 0;
-    let speed = 0.03; // 회전 속도
-    let direction = 1; // 1: 시계방향, -1: 반시계방향
+    let speed = 0.03;
+    let direction = 1;
     
+    const baseTargetSize = Math.PI / 3; // 기본 크기 (60도)
     let targetStart = 0;
-    let targetSize = Math.PI / 3; // 기본 타겟 크기 (60도)
+    let targetSize = baseTargetSize;
+
+    // 시간 제한 변수 (10초)
+    const MAX_TIME = 10;
+    let timeRemaining = MAX_TIME;
+    let lastTime = 0;
+    let animFrameId = null;
 
     highScoreEl.innerText = highScore;
 
     // 새로운 타겟 영역 생성
     function generateTarget() {
-      // 바늘 위치와 너무 가깝지 않은 곳에 타겟 배치
       let minDistance = Math.PI / 2;
       let newTarget = Math.random() * Math.PI * 2;
       
@@ -157,8 +188,10 @@
       }
       
       targetStart = newTarget;
-      // 점수가 높을수록 타겟 크기를 줄임 (최소 12도까지)
-      targetSize = Math.max(Math.PI / 15, (Math.PI / 3) - (score * 0.015));
+
+      // 5단계 상승 시마다 타겟 크기를 5%씩 축소
+      const reductionFactor = Math.pow(0.95, Math.floor(score / 5));
+      targetSize = Math.max(Math.PI / 20, baseTargetSize * reductionFactor);
     }
 
     function draw() {
@@ -199,15 +232,38 @@
       ctx.fill();
     }
 
-    function update() {
+    function update(timestamp) {
       if (!isPlaying) return;
 
+      // deltaTime 계산으로 프레임 독립적인 타이머 구현
+      if (!lastTime) lastTime = timestamp;
+      const deltaTime = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      timeRemaining -= deltaTime;
+      
+      // 타이머 바 상태 업데이트
+      const timePercent = Math.max(0, (timeRemaining / MAX_TIME) * 100);
+      timerBar.style.width = timePercent + "%";
+      
+      if (timeRemaining <= 3) {
+        timerBar.style.backgroundColor = 'var(--accent-red)';
+      } else {
+        timerBar.style.backgroundColor = 'var(--accent-green)';
+      }
+
+      // 시간 초과 시 게임 오버
+      if (timeRemaining <= 0) {
+        gameOver();
+        return;
+      }
+
+      // 바늘 회전
       needleAngle += speed * direction;
-      // 각도를 0 ~ 2PI 범위로 유지
       needleAngle = (needleAngle + Math.PI * 2) % (Math.PI * 2);
 
       draw();
-      requestAnimationFrame(update);
+      animFrameId = requestAnimationFrame(update);
     }
 
     function startGame() {
@@ -215,15 +271,24 @@
       speed = 0.03;
       direction = 1;
       needleAngle = 0;
+      timeRemaining = MAX_TIME;
+      lastTime = 0;
+      
       scoreEl.innerText = score;
+      timerBar.style.width = "100%";
+      timerBar.style.backgroundColor = 'var(--accent-green)';
+      startBtn.style.display = 'none';
+      
       isPlaying = true;
-      startBtn.innerText = 'UNLOCKING...';
       generateTarget();
-      update();
+      
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      animFrameId = requestAnimationFrame(update);
     }
 
     function gameOver() {
       isPlaying = false;
+      startBtn.style.display = 'block';
       startBtn.innerText = 'TRY AGAIN';
       
       if (score > highScore) {
@@ -232,7 +297,7 @@
         highScoreEl.innerText = highScore;
       }
       
-      // 실패 시 빨간색 깜빡임 효과
+      // 실패 시 빨간색 강조 피드백
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
@@ -242,7 +307,7 @@
     function handleAction() {
       if (!isPlaying) return;
 
-      // 각도 판정 규격화 (0 ~ 2PI)
+      // 각도 범위 판정 (0 ~ 2PI)
       let current = needleAngle;
       let start = (targetStart + Math.PI * 2) % (Math.PI * 2);
       let end = (start + targetSize) % (Math.PI * 2);
@@ -252,7 +317,7 @@
       if (start < end) {
         isSuccess = current >= start && current <= end;
       } else {
-        // 타겟이 0(360도) 지점에 걸쳐 있는 경우
+        // 타겟이 360도 경계를 넘어가는 경우
         isSuccess = current >= start || current <= end;
       }
 
@@ -260,9 +325,10 @@
         score++;
         scoreEl.innerText = score;
         
-        // 난이도 상승: 속도 증가 & 회전 방향 전환
+        // 난이도 상승: 속도 증가, 방향 전환, 시간 10초로 재설정
         speed += 0.003;
-        direction *= -1; 
+        direction *= -1;
+        timeRemaining = MAX_TIME;
         
         generateTarget();
       } else {
@@ -270,12 +336,7 @@
       }
     }
 
-    // 이벤트 리스너
-    startBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      startGame();
-    });
-
+    // 터치 및 클릭 이벤트 지원 (모바일/태블릿 반응성 최적화)
     vaultClickArea.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       if (isPlaying) {
@@ -283,12 +344,18 @@
       }
     });
 
+    startBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      startGame();
+    });
+
+    // 스페이스바 조작 지원
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
         e.preventDefault();
-        if (!isPlaying && startBtn.innerText !== 'UNLOCKING...') {
+        if (!isPlaying && startBtn.style.display !== 'none') {
           startGame();
-        } else {
+        } else if (isPlaying) {
           handleAction();
         }
       }
